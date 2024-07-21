@@ -1,6 +1,6 @@
 # :pager: A command module for Jai 
 
-A simple command module for the Jai programming language. You can check the code in [module.jai](parse.jai) and a few examples of how to use them in [example.jai](example.jai).
+A simple command module for the Jai programming language. You can check the code in [module.jai](module.jai) and a few examples of how to use them in [example.jai](example.jai).
 
 This is making the local commands and console code I had into a plugin + module setup so it can be shared around. That code itself originally comes from the ideas presented by Jonathan Blow in [his console commands video](https://www.youtube.com/watch?v=N2UdveBwWY4).
 
@@ -14,7 +14,6 @@ my_command :: (v : int)
 { 
     /* . . . */
 } @Command
-
 ```
 Then call it somewhere in your code by doing:
 ```
