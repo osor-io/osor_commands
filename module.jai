@@ -200,6 +200,7 @@ __commands_temporary_copy :: (v : $T) -> Any
 Commands_Metaprogram_Plugin :: struct
 {
     using #as plugin : Metaprogram_Plugin;
+    found_module := false;
     round := 0;
     commands_to_add : [..] *Code_Procedure_Header;
 }
@@ -208,6 +209,14 @@ get_plugin :: () -> *Metaprogram_Plugin #compile_time
 {
     plugin := New(Commands_Metaprogram_Plugin);
     plugin.message = handle_plugin_message;
+    plugin.finish = (plugin : *Metaprogram_Plugin)
+    {
+        commands_plugin := cast(*Commands_Metaprogram_Plugin)plugin;
+        if !commands_plugin.found_module
+        {
+            compiler_report(tprint("Using the osor_commands plug-in but we didn't see an #import for the module, you need it both as a module and a plug-in!"));
+        }
+    };
     plugin.shutdown = (plugin : *Metaprogram_Plugin)
     {
         commands_plugin := cast(*Commands_Metaprogram_Plugin)plugin;
@@ -233,6 +242,14 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
 
     if message.kind ==
     {
+        case .IMPORT;
+        message_import := cast(*Message_Import)message;
+        if !commands_plugin.found_module && message_import.module_name == "osor_commands"
+        {
+            commands_plugin.found_module = true;
+            add_build_string("OSOR_COMMANDS_PLUGIN_HAS_RUN :: true;", plugin.workspace, message_import);
+        }
+
         case .TYPECHECKED;
         message_typechecked := cast(*Message_Typechecked)message;
         for typechecked_procedure_header : message_typechecked.procedure_headers
@@ -373,7 +390,7 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
 
 
 initialized : u32 = 0;
-init_if_needed :: ()
+init_if_needed :: ($__T : Type = void) // @@NOTE: Making this polymorphic so it doesn't try to be compiled in any case on the workspace that calls the plug-in
 {
     initialize :: ()
     {
@@ -406,6 +423,8 @@ init_if_needed :: ()
             registration_procedure();
         }
     }
+    
+    #assert(OSOR_COMMANDS_PLUGIN_HAS_RUN); // @@NOTE: If this fails, you're probably importing this module but not the plug-in, you need both!
 
     //
     // @@NOTE: If multiple threads get past the first check, only the
