@@ -465,31 +465,32 @@ parse_command_string :: (command_string : string) -> success : bool, name : stri
     command_name := token.text;
     command_arguments : [..]Any;
 
-    negate_value := false;
-
     while true
     {
         token := tokenize_one_token(*tokenizer);
+
+        if token.type == .MINUS
+        {
+            minus_token := token;
+            number_token := tokenize_one_token(*tokenizer);
+            parse_assert(number_token.type == .INTEGER || number_token.type == .FLOAT, "Expected an integer or a floating point number after a minus, but got a '%' (token type = %)", number_token.text, number_token.type);
+            token = Token.{
+                number_token.type,
+                get_text_between_tokens_including_last(minus_token, number_token),
+                minus_token.line,
+            };
+        }
+
         if token.type ==
         {
             case .INTEGER;
             value : *s64 = talloc(size_of(s64)); 
             value.* = string_to_int(token.text, base = 10, T = s64);
-            if negate_value 
-            {
-                value.* *= -1;
-                negate_value = false;
-            }
             array_add(*command_arguments, value.*);
 
             case .FLOAT;
             value : *float64 = talloc(size_of(float64)); 
             value.* = string_to_float64(token.text);
-            if negate_value 
-            {
-                value.* *= -1;
-                negate_value = false;
-            }
             array_add(*command_arguments, value.*);
 
             case .BOOL;
@@ -498,9 +499,6 @@ parse_command_string :: (command_string : string) -> success : bool, name : stri
             else if compare_nocase(token.text, "false") == 0 { value.* = false; }
             else parse_assert(false, "Unexpected text for a boolean value %\n", token.text); 
             array_add(*command_arguments, value.*);
-
-            case .MINUS;
-            negate_value = !negate_value;
 
             case .STRING; #through;
             case .IDENTIFIER;
