@@ -465,6 +465,8 @@ parse_command_string :: (command_string : string) -> success : bool, name : stri
     command_name := token.text;
     command_arguments : [..]Any;
 
+    negate_value := false;
+
     while true
     {
         token := tokenize_one_token(*tokenizer);
@@ -473,11 +475,21 @@ parse_command_string :: (command_string : string) -> success : bool, name : stri
             case .INTEGER;
             value : *s64 = talloc(size_of(s64)); 
             value.* = string_to_int(token.text, base = 10, T = s64);
+            if negate_value 
+            {
+                value.* *= -1;
+                negate_value = false;
+            }
             array_add(*command_arguments, value.*);
 
             case .FLOAT;
             value : *float64 = talloc(size_of(float64)); 
             value.* = string_to_float64(token.text);
+            if negate_value 
+            {
+                value.* *= -1;
+                negate_value = false;
+            }
             array_add(*command_arguments, value.*);
 
             case .BOOL;
@@ -486,6 +498,9 @@ parse_command_string :: (command_string : string) -> success : bool, name : stri
             else if compare_nocase(token.text, "false") == 0 { value.* = false; }
             else parse_assert(false, "Unexpected text for a boolean value %\n", token.text); 
             array_add(*command_arguments, value.*);
+
+            case .MINUS;
+            negate_value = !negate_value;
 
             case .STRING; #through;
             case .IDENTIFIER;
