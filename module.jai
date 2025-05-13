@@ -327,11 +327,11 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                     append(*b, "\n");
                     append(*b, "        case;\n");
                     if min_arguments == 0 && max_arguments == 0
-                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command %%, takes no arguments but %% were provided\", \"%1\", args.count);\n", code_header.name);
+                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command \%, takes no arguments but \% were provided\", \"%1\", args.count);\n", code_header.name);
                     else if min_arguments == max_arguments
-                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command %%, takes %% but %% were provided\", \"%1\", %2, args.count);\n", code_header.name, min_arguments);
+                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command \%, takes \% but \% were provided\", \"%1\", %2, args.count);\n", code_header.name, min_arguments);
                     else
-                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command %%, takes between %% and %% but %% were provided\", \"%1\", %2, %3, args.count);\n", code_header.name, min_arguments, max_arguments);
+                        print(*b, "        return false, .[], tprint(\"Invalid argument count for command \%, takes between \% and \% but \% were provided\", \"%1\", %2, %3, args.count);\n", code_header.name, min_arguments, max_arguments);
                     append(*b, "    }\n");
 
                     append(*b, "}\n");
@@ -343,7 +343,7 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
             }
         }
 
-        case .COMPILATION_PHASE;
+        case .PHASE;
         phase_message := cast(*Message_Phase)message;
         if phase_message.phase == .TYPECHECKED_ALL_WE_CAN && commands_plugin.commands_to_add.count > 0
         {
