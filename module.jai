@@ -21,22 +21,29 @@ execute_command :: (command_string : string) -> success : bool, results : []Any,
     {
         return false, .[], tprint("Couldn't parse command string %: %", command_string, parse_message);
     }
-    command := table_find_pointer(*__command_table, name);
-    if !command
+    command_data := table_find_pointer(*__command_table, name);
+    if !command_data
     {
         return false, .[], tprint("Couldn't find command %", name);
     }
-    success, result, message := command.*(arguments);
+    success, result, message := command_data.*.wrapped_command(arguments);
     return success, result, message;
+}
+
+
+
+get_command :: (name : string) -> *Command_Data
+{
+    init_if_needed();
+    command_data_pointer := table_find_pointer(*__command_table, name);
+    return ifx command_data_pointer then command_data_pointer.* else null;
 }
 
 
 
 is_command :: (name : string) -> bool
 {
-    init_if_needed();
-    command := table_find_pointer(*__command_table, name);
-    return command != null;
+    return get_command(name) != null;
 }
 
 
@@ -49,26 +56,27 @@ get_all_commands :: () -> []Command_Data
 
 
 
-Command_Procedure :: #type (arguments : []Any) -> (success : bool, results : []Any, message: string);
+Wrapped_Command_Procedure :: #type (arguments : []Any) -> (success : bool, results : []Any, message: string);
 Command_Data :: struct
 {
+    wrapped_command : Wrapped_Command_Procedure;
+    command_type_info : *Type_Info_Procedure;
     name : string;
     name_with_hints : string;
-    command : Command_Procedure;
 }
 
 
 
 __command_data : [..]Command_Data;
-__command_table : Table(string, Command_Procedure);
-__register_command :: (name : string, command : Command_Procedure, name_with_hints : string)
+__command_table : Table(string, *Command_Data);
+__register_command :: (name : string, wrapped_command : Wrapped_Command_Procedure, name_with_hints : string, command_type_info : *Type_Info_Procedure)
 {
     array_add(*__command_data, .{
+        wrapped_command = wrapped_command,
+        command_type_info = command_type_info,
         name = name,
-        command = command,
         name_with_hints = name_with_hints,
     });
-    table_add(*__command_table, name, command);
 }
 
 
@@ -79,6 +87,8 @@ __update_stuff_after_registering_a_bunch_of_commands :: ()
     {
         return compare_strings(a.name, b.name);
     });
+    table_reset(*__command_table);
+    for * __command_data table_add(*__command_table, it.name, it);
 }
 
 
@@ -280,7 +290,7 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                     }
 
                     b : String_Builder;
-                    append(*b, "__command__");
+                    append(*b, "__wrapped_command__");
                     append(*b, code_header.name);
                     append(*b, " :: (args : []Any) -> success : bool, results : []Any, message : string\n{\n");
                     append(*b, "    if args.count ==\n");
@@ -357,8 +367,8 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                 // name
                 append(*b, code_header.name);
 
-                // command
-                append(*b, "\", __command__");
+                // wrapped_command
+                append(*b, "\", __wrapped_command__");
                 append(*b, code_header.name);
                 append(*b, ", \"");
 
@@ -374,7 +384,12 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                     append(*b, argument_type_name);
                     if is_default then append(*b, "]");
                 }
-                append(*b, "\"");
+                append(*b, "\", ");
+
+                // command_type_info
+                append(*b, "type_info(type_of(");
+                append(*b, code_header.name);
+                append(*b, "))");
 
                 append(*b, ");\n");
             }
