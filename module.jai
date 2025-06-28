@@ -177,6 +177,7 @@ __commands_any_to_arg :: (arg : Any, $T : Type) -> value : T #expand
                     return value;
                 }
             }
+            `return false, .[], tprint("String provided (\"%\") doesn't match any named value of enum %", the_string, T);
         }
         `return false, .[], tprint("Error parsing argument, expected a % and got a %", T, type_to_string(arg.type));
     }
