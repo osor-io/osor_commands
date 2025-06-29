@@ -208,6 +208,14 @@ __commands_temporary_copy :: (v : $T) -> Any
 
 
 
+__commands_instantiate_default_type :: ($T : Type) -> T
+{
+    default : T;
+    return default;
+}
+
+
+
 Commands_Metaprogram_Plugin :: struct
 {
     using #as plugin : Metaprogram_Plugin;
@@ -291,6 +299,22 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                     }
 
                     b : String_Builder;
+
+                    append(*b, "__disambiguated_command__");
+                    append(*b, code_header.name);
+                    append(*b, " :: #procedure_of_call(");
+                    append(*b, code_header.name);
+                    append(*b, "(");
+                    for argument, argument_index : code_header.arguments
+                    {
+                        argument := code_header.arguments[argument_index];
+                        argument_type_info := ifx argument.type_inst then argument.type_inst.result else argument.expression.type;
+                        argument_type_name := type_to_string(argument_type_info);
+                        if argument_index > 0 then append(*b, ", ");
+                        print(*b, "__commands_instantiate_default_type(%1)", argument_type_name);
+                    }
+                    append(*b, "));\n");
+
                     append(*b, "__wrapped_command__");
                     append(*b, code_header.name);
                     append(*b, " :: (args : []Any) -> success : bool, results : []Any, message : string\n{\n");
@@ -315,7 +339,7 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                                        else print(*b, ", result_%", it);
                         }
                         if code_header.returns.count > 0 then append(*b, " := ");
-                        print(*b, "%(", code_header.name);
+                        print(*b, "__disambiguated_command__%(", code_header.name);
                         for argument_index : 0..argument_count-1 
                         {
                             if argument_index == 0 then print(*b, "arg_%", argument_index);
@@ -388,7 +412,7 @@ handle_plugin_message :: (plugin : *Metaprogram_Plugin, message: *Message) #comp
                 append(*b, "\", ");
 
                 // command_type_info
-                append(*b, "type_info(type_of(");
+                append(*b, "type_info(type_of(__disambiguated_command__");
                 append(*b, code_header.name);
                 append(*b, "))");
 
